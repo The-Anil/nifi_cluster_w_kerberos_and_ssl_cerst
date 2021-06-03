@@ -1,0 +1,83 @@
+1. 
+sudo rm -rf /etc/security/serverKeys/*
+sudo mkdir -p /etc/security/serverKeys
+sudo chown -R hadoop:hadoop /etc/security/serverKeys/
+sudo chmod 755 /etc/security/serverKeys/
+
+
+
+
+2. Generate Keystore for all servers
+
+sudo keytool -genkey -alias NIFI_100 -keyalg RSA -keysize 1024 -ext "SAN=DNS:innolx134100.itte.com,ip:10.174.134.100" -dname "CN=innolx134100.itte.com, OU=IT, O=Ericsson, L=Stockholm, ST=Stockholm, C=SE" -keypass Ericsson@123 -keystore /etc/security/serverKeys/keystore_100.jks -storepass Ericsson@123
+
+sudo keytool -genkey -alias NIFI_66 -keyalg RSA -keysize 1024 -ext "SAN=DNS:innolx13466.itte.com,ip:10.174.134.66" -dname "CN=innolx13466.itte.com, OU=IT, O=Ericsson, L=Stockholm, ST=Stockholm, C=SE" -keypass Ericsson@123 -keystore /etc/security/serverKeys/keystore_66.jks -storepass Ericsson@123
+
+sudo keytool -genkey -alias NIFI_232 -keyalg RSA -keysize 1024 -ext "SAN=DNS:innolx134232.itte.com,ip:10.174.134.232" -dname "CN=innolx134232.itte.com, OU=IT, O=Ericsson, L=Stockholm, ST=Stockholm, C=SE" -keypass Ericsson@123 -keystore /etc/security/serverKeys/keystore_232.jks -storepass Ericsson@123
+
+
+3. Export Keystore for all servers
+
+
+sudo keytool -export -alias NIFI_100 -keystore /etc/security/serverKeys/keystore_100.jks -rfc -file /etc/security/serverKeys/NIFI_100.csr -storepass Ericsson@123
+sudo keytool -export -alias NIFI_66 -keystore /etc/security/serverKeys/keystore_66.jks -rfc -file /etc/security/serverKeys/NIFI_66.csr -storepass Ericsson@123
+sudo keytool -export -alias NIFI_232 -keystore /etc/security/serverKeys/keystore_232.jks -rfc -file /etc/security/serverKeys/NIFI_232.csr -storepass Ericsson@123
+
+
+
+
+4. Generate Truststore
+
+sudo keytool -import -noprompt -alias NIFI_100 -file /etc/security/serverKeys/NIFI_100.csr -keystore /etc/security/serverKeys/truststore_100.jks -storepass Ericsson@123
+sudo keytool -import -noprompt -alias NIFI_66 -file /etc/security/serverKeys/NIFI_66.csr -keystore /etc/security/serverKeys/truststore_66.jks -storepass Ericsson@123
+sudo keytool -import -noprompt -alias NIFI_232 -file /etc/security/serverKeys/NIFI_232.csr -keystore /etc/security/serverKeys/truststore_232.jks -storepass Ericsson@123
+
+
+
+5. Create a single trust tore file that contains the public key from all certificates.
+
+sudo keytool -import -noprompt -alias NIFI_100 -file /etc/security/serverKeys/NIFI_100.csr -keystore /etc/security/serverKeys/truststore.jks -storepass Ericsson@123
+sudo keytool -import -noprompt -alias NIFI_66 -file /etc/security/serverKeys/NIFI_66.csr -keystore /etc/security/serverKeys/truststore.jks -storepass Ericsson@123
+sudo keytool -import -noprompt -alias NIFI_232 -file /etc/security/serverKeys/NIFI_232.csr -keystore /etc/security/serverKeys/truststore.jks -storepass Ericsson@123
+
+
+6. Signed certicate
+
+sudo openssl genrsa -out /etc/security/serverKeys/NIFI_100.key 2048
+
+sudo openssl req -x509 -new -key /etc/security/serverKeys/NIFI_100.key -days 300 -out /etc/security/serverKeys/NIFI_100.pem
+
+sudo keytool -keystore /etc/security/serverKeys/keystore_100.jks -alias NIFI_100 -certreq -file /etc/security/serverKeys/NIFI_100.cert -storepass Ericsson@123 -keypass Ericsson@123
+
+sudo openssl x509 -req -CA /etc/security/serverKeys/NIFI_100.pem -CAkey /etc/security/serverKeys/NIFI_100.key -in /etc/security/serverKeys/NIFI_100.cert -out /etc/security/serverKeys/NIFI_100.signed -days 300 -CAcreateserial
+
+
+sudo openssl genrsa -out /etc/security/serverKeys/NIFI_66.key 2048
+
+sudo openssl req -x509 -new -key /etc/security/serverKeys/NIFI_66.key -days 300 -out /etc/security/serverKeys/NIFI_66.pem
+
+sudo keytool -keystore /etc/security/serverKeys/keystore_66.jks -alias NIFI_66 -certreq -file /etc/security/serverKeys/NIFI_66.cert -storepass Ericsson@123 -keypass Ericsson@123
+
+sudo openssl x509 -req -CA /etc/security/serverKeys/NIFI_66.pem -CAkey /etc/security/serverKeys/NIFI_66.key -in /etc/security/serverKeys/NIFI_66.cert -out /etc/security/serverKeys/NIFI_66.signed -days 300 -CAcreateserial
+
+
+sudo openssl genrsa -out /etc/security/serverKeys/NIFI_232.key 2048
+
+sudo openssl req -x509 -new -key /etc/security/serverKeys/NIFI_232.key -days 300 -out /etc/security/serverKeys/NIFI_232.pem
+
+sudo keytool -keystore /etc/security/serverKeys/keystore_232.jks -alias NIFI_232 -certreq -file /etc/security/serverKeys/NIFI_232.cert -storepass Ericsson@123 -keypass Ericsson@123
+
+sudo openssl x509 -req -CA /etc/security/serverKeys/NIFI_232.pem -CAkey /etc/security/serverKeys/NIFI_232.key -in /etc/security/serverKeys/NIFI_232.cert -out /etc/security/serverKeys/NIFI_232.signed -days 300 -CAcreateserial
+
+
+
+6. change and ownership 
+
+sudo chown hadoop:hadoop /etc/security/serverKeys/*
+sudo chmod 755 /etc/security/serverKeys/*
+
+
+7. Copy Certificate to all servers
+
+scp -r keystore_66.jks truststore_66.jks truststore.jks hadoop@10.174.134.66:/etc/security/serverKeys/
+scp -r keystore_232.jks truststore_232.jks truststore.jks hadoop@10.174.134.232:/etc/security/serverKeys/
